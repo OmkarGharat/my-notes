@@ -5,6 +5,16 @@ mkdocs_base.yml
 mkdocs.yml
 deploy_site.bat
 
+# Ignore build artifacts
+site/
+encrypted/
+site_temp/
+site_upload_temp/
+
+# Ignore the encryption metadata
+.staticrypt.json
+
+
 # StatiCrypt metadata
 .staticrypt.json
 
