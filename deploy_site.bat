@@ -108,17 +108,8 @@ echo [STEP 6] Committing and Pushing...
 git add site/ vercel.json
 
 :: Check if there are changes to commit
-git diff-index --quiet HEAD
-if %ERRORLEVEL% EQU 0 (
-    echo [INFO] No changes detected. Site is already up to date.
-) else (
-    git commit -m "Deploy: %date% %time%"
-    if %ERRORLEVEL% NEQ 0 (
-        echo [ERROR] Commit failed
-        git checkout main
-        pause
-        exit /b 1
-    )
+git add -A
+git commit -m "Force Deploy: %date% %time%"
     
     echo Pushing to GitHub...
     git push origin deploy
@@ -131,7 +122,6 @@ if %ERRORLEVEL% EQU 0 (
     )
     
     echo [OK] Pushed to deploy branch
-)
 
 echo.
 
