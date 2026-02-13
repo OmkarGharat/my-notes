@@ -105,14 +105,11 @@ rd /s /q "%TEMP_DEPLOY%"
 
 :: 11. Git operations
 echo [STEP 6] Committing and Pushing...
-git add site/ vercel.json
 
 :: Check if there are changes to commit
 git add -A
-git commit -m "Force Deploy: %date% %time%"
-    
-    echo Pushing to GitHub...
-    git push origin deploy
+git commit --allow-empty -m "Deploy: %date% %time%"
+git push origin deploy
     
     if %ERRORLEVEL% NEQ 0 (
         echo [ERROR] Push failed
