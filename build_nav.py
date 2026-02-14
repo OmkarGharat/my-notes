@@ -38,7 +38,7 @@ def scan_docs_folder(docs_path="docs"):
             
             relative_path = entry.relative_to(relative_to)
             
-            if entry.is_file() and entry.suffix == '.md':
+            if entry.is_file() and entry.suffix == '.md' and entry.name.lower() != '404.md':    
                 # For markdown files, create a nav entry
                 # Use filename without extension as the title
                 title = entry.stem.replace('_', ' ').replace('-', ' ').title()
