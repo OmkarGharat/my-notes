@@ -1,5 +1,5 @@
 {
-  "installCommand": "echo 'Skip'",
-  "buildCommand": "echo 'Skip'",
-  "outputDirectory": "."
+  "installCommand": "echo 'Done'",
+  "buildCommand": "echo 'Done'",
+  "outputDirectory": "site"
 }
