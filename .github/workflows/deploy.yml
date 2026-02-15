@@ -16,12 +16,26 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Install dependencies
+      - name: Create virtual environment and install dependencies
         run: |
-          pip install mkdocs mkdocs-material pymdown-extensions mkdocs-macros-plugin pyyaml
+          python -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+
+      - name: Install Node.js (for staticrypt)
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Install staticrypt
+        run: npm install -g staticrypt
 
       - name: Build site
-        run: python publish.py
+        run: |
+          source venv/bin/activate
+          python publish.py
+        env:
+          SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }} # optional
 
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v20
