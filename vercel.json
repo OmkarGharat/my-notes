@@ -1,5 +1,5 @@
 {
-  "buildCommand": "python publish.py",
-  "outputDirectory": "site",
-  "installCommand": "pip install -r requirements.txt"
+  "installCommand": "echo 'Dependencies handled by GitHub Actions'",
+  "buildCommand": "echo 'Build handled by GitHub Actions'",
+  "outputDirectory": "site"
 }
