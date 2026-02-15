@@ -1,7 +1,5 @@
 {
-  "cleanUrls": true,
-  "trailingSlash": true,
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/$1" }
-  ]
+  "buildCommand": "python publish.py",
+  "outputDirectory": "site",
+  "installCommand": "pip install -r requirements.txt"
 }
