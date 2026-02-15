@@ -21,8 +21,24 @@ echo.
 
 :: 1. Build and Encrypt
 echo [STEP 1] Building and Encrypting Site...
-call .\venv\Scripts\activate
-python publish.py
+
+:: Use the script's own directory to find venv
+set "VENV_PATH=%~dp0venv\Scripts\activate.bat"
+
+if not exist "%VENV_PATH%" (
+    echo [ERROR] Virtual environment not found!
+    echo Looked in: "%VENV_PATH%"
+    echo.
+    echo Please ensure the 'venv' folder is in the same folder as this script.
+    pause
+    exit /b 1
+)
+
+:: Activate using double quotes to handle spaces in the path
+call "%VENV_PATH%"
+
+:: Run the publisher
+python "%~dp0publish.py"
 
 if %ERRORLEVEL% NEQ 0 (
     echo.
