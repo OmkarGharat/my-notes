@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 echo ============================================
 echo SAFE Secure Build and Deploy
 echo ============================================
@@ -8,10 +9,8 @@ echo.
 for /f "tokens=*" %%i in ('git branch --show-current') do set CURRENT_BRANCH=%%i
 
 if not "%CURRENT_BRANCH%"=="main" (
-    echo ERROR: You must be on 'main' branch to deploy!
+    echo [ERROR] You must be on 'main' branch to deploy!
     echo Current branch: %CURRENT_BRANCH%
-    echo.
-    echo Run: git checkout main
     pause
     exit /b 1
 )
@@ -19,129 +18,92 @@ if not "%CURRENT_BRANCH%"=="main" (
 echo [OK] Starting from main branch...
 echo.
 
-:: 1. Build and Encrypt
-echo [STEP 1] Building and Encrypting Site...
-call .\venv\Scripts\activate
-python publish.py
+:: 1. Build and Encrypt (Advanced Self-Healing)
+echo [STEP 1] Checking Virtual Environment...
 
-if %ERRORLEVEL% NEQ 0 (
-    echo.
-    echo [ERROR] Build failed. Cannot deploy.
-    pause
-    exit /b %ERRORLEVEL%
+set "VENV_DIR=%~dp0venv"
+set "ACTIVATE_PATH=%VENV_DIR%\Scripts\activate.bat"
+set "REQ_FILE=%~dp0requirements.txt"
+
+:: 1a. Rebuild if activate.bat is missing
+if not exist "%ACTIVATE_PATH%" (
+    echo [WARNING] Environment corrupted or missing. Rebuilding...
+    if exist "%VENV_DIR%" rd /s /q "%VENV_DIR%"
+    python -m venv venv || (echo [ERROR] Python not found! & pause & exit /b 1)
+    set "NEEDS_INSTALL=1"
 )
 
+:: 1b. Check if requirements.txt exists
+if not exist "%REQ_FILE%" (
+    echo [ERROR] requirements.txt not found in project root!
+    pause
+    exit /b 1
+)
+
+:: 1c. Install or Update
+if "%NEEDS_INSTALL%"=="1" (
+    echo [ACTION] Installing all plugins...
+    "%VENV_DIR%\Scripts\pip" install -r "%REQ_FILE%" || (echo [ERROR] Installation failed! & pause & exit /b 1)
+)
+
+:: Activate the environment
+call "%ACTIVATE_PATH%" || (echo [ERROR] Activation failed! & pause & exit /b 1)
+
+:: Run the publisher
+python "%~dp0publish.py" || (echo [ERROR] publish.py failed! & pause & exit /b 1)
+
 echo [OK] Build successful!
-echo.
 
 :: 2. Verify site folder exists
-if not exist site (
+if not exist "%~dp0site" (
     echo [ERROR] site folder not found!
-    echo Something went wrong with the build.
     pause
     exit /b 1
 )
 
 echo [STEP 2] Preparing Deployment...
 
-:: 3. Create a temporary folder OUTSIDE the git repo structure
+:: 3. Create a temporary folder
 set "TEMP_DEPLOY=%TEMP%\mkdocs_deploy_%RANDOM%"
-echo Creating temp folder: %TEMP_DEPLOY%
+mkdir "%TEMP_DEPLOY%"
 
-:: 4. Copy the built site to temp location (SAFETY: keeps it safe during branch switch)
-xcopy site "%TEMP_DEPLOY%\site\" /E /I /Q /Y
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Failed to copy site to temp location
-    pause
-    exit /b 1
-)
+:: 4. Copy built site and essential configs to temp location
+xcopy "%~dp0site" "%TEMP_DEPLOY%\site\" /E /I /Q /Y || (echo [ERROR] Copy failed! & pause & exit /b 1)
 
-:: 5. Copy vercel.json if it exists
-if exist vercel.json (
-    copy vercel.json "%TEMP_DEPLOY%\vercel.json" /Y
-)
+if exist "%~dp0vercel.json" copy "%~dp0vercel.json" "%TEMP_DEPLOY%\" /Y
+if exist "%~dp0mkdocs_base.yml" copy "%~dp0mkdocs_base.yml" "%TEMP_DEPLOY%\" /Y
 
 echo [OK] Files backed up to temp location
 echo.
 
-:: 6. Switch to deploy branch (FILES ARE SAFE IN TEMP FOLDER)
+:: 5. Switch to deploy branch
 echo [STEP 3] Switching to deploy branch...
-git checkout deploy
+git checkout deploy || (echo [ERROR] Could not switch to deploy & rd /s /q "%TEMP_DEPLOY%" & pause & exit /b 1)
 
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Failed to switch to deploy branch
-    echo Cleaning up temp folder...
-    rd /s /q "%TEMP_DEPLOY%"
-    git checkout main
-    pause
-    exit /b 1
-)
-
-echo [OK] On deploy branch
-echo.
-
-:: 7. Clean ONLY the site folder (not the entire directory!)
-echo [STEP 4] Cleaning old deployment...
-if exist site (
-    rd /s /q site
-    echo [OK] Old site folder removed
-)
-
-:: 8. Copy fresh site from temp location
-echo [STEP 5] Copying new site...
+:: 6. Clean and Update
+echo [STEP 4] Updating deployment branch...
+if exist site rd /s /q site
 xcopy "%TEMP_DEPLOY%\site" site\ /E /I /Q /Y
+if exist "%TEMP_DEPLOY%\vercel.json" copy "%TEMP_DEPLOY%\vercel.json" . /Y
+if exist "%TEMP_DEPLOY%\mkdocs_base.yml" copy "%TEMP_DEPLOY%\mkdocs_base.yml" . /Y
 
-:: 9. Copy vercel.json if it exists
-if exist "%TEMP_DEPLOY%\vercel.json" (
-    copy "%TEMP_DEPLOY%\vercel.json" vercel.json /Y
-)
-
-echo [OK] New files copied
-echo.
-
-:: 10. Clean up temp folder
-echo Cleaning up temp folder...
+:: 7. Clean up temp
 rd /s /q "%TEMP_DEPLOY%"
 
-:: 11. Git operations
-echo [STEP 6] Committing and Pushing...
-
-:: Check if there are changes to commit
+:: 8. Git operations
+echo [STEP 5] Committing and Pushing...
 git add -A
 git commit --allow-empty -m "Deploy: %date% %time%"
-git push origin deploy
-    
-    if %ERRORLEVEL% NEQ 0 (
-        echo [ERROR] Push failed
-        git checkout main
-        pause
-        exit /b 1
-    )
-    
-    echo [OK] Pushed to deploy branch
+git push origin deploy || (echo [ERROR] Push failed! & git checkout main & pause & exit /b 1)
 
+echo [OK] Pushed to deploy branch
 echo.
 
-:: 12. Return to main branch
-echo [STEP 7] Returning to main branch...
+:: 9. Return to main branch
+echo [STEP 6] Returning to main branch...
 git checkout main
 
-if %ERRORLEVEL% NEQ 0 (
-    echo [WARNING] Failed to return to main branch
-    echo You may need to manually run: git checkout main
-    pause
-    exit /b 1
-)
-
-echo [OK] Back on main branch
-echo.
 echo ============================================
 echo DEPLOYMENT SUCCESSFUL!
 echo ============================================
-echo.
-echo Your site has been deployed to the 'deploy' branch.
-echo Check your hosting platform for the live site.
-echo.
-echo All your files on main branch are SAFE!
-echo.
 pause

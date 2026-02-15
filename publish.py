@@ -78,9 +78,9 @@ def build_mkdocs_site():
         print("Cleaning old site folder...")
         shutil.rmtree("site")
     
-    # Build site with mkdocs_base.yml
+    # Build site with mkdocs.yml
+    # In publish.py, ensure this line is used:
     return run_command(["mkdocs", "build", "-f", "mkdocs_base.yml"], "Building MkDocs site")
-
 
 def encrypt_site():
     """Encrypt the site with StatiCrypt"""
