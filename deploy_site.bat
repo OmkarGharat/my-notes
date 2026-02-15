@@ -40,18 +40,11 @@ if not exist "%~dp0site" (
     exit /b 1
 )
 
-:: 3. Show the generated mkdocs_base.yml (for verification)
-echo.
-echo [DEBUG] Content of mkdocs_base.yml on main branch:
-type "%~dp0mkdocs_base.yml"
-echo.
-pause Press any key to continue...
-
-:: 4. Create a temporary folder
+:: 3. Create a temporary folder
 set "TEMP_DEPLOY=%TEMP%\mkdocs_deploy_%RANDOM%"
 mkdir "%TEMP_DEPLOY%"
 
-:: 5. Copy built site and essential configs to temp location
+:: 4. Copy built site and essential configs to temp location
 echo [STEP 2] Copying files to temp folder...
 xcopy "%~dp0site" "%TEMP_DEPLOY%\site\" /E /I /Q /Y || (
     echo [ERROR] Copy failed! 
@@ -59,14 +52,13 @@ xcopy "%~dp0site" "%TEMP_DEPLOY%\site\" /E /I /Q /Y || (
     exit /b 1
 )
 
-:: Fix: ensure "copy" is present in the commands below
 if exist "%~dp0vercel.json" copy "%~dp0vercel.json" "%TEMP_DEPLOY%\" /Y
 if exist "%~dp0mkdocs_base.yml" copy "%~dp0mkdocs_base.yml" "%TEMP_DEPLOY%\" /Y
 
 echo [OK] Files backed up to temp location
 echo.
 
-:: 6. Switch to deploy branch
+:: 5. Switch to deploy branch
 echo [STEP 3] Switching to deploy branch...
 git checkout deploy || (
     echo [ERROR] Could not switch to deploy branch
@@ -75,35 +67,23 @@ git checkout deploy || (
     exit /b 1
 )
 
-:: 7. Clean old files on deploy branch
+:: 6. Clean old files on deploy branch
 echo [STEP 4] Cleaning old deployment...
 if exist site rd /s /q site
 if exist mkdocs_base.yml del mkdocs_base.yml
 if exist vercel.json del vercel.json
 
-:: 8. Copy new files from temp to deploy branch
+:: 7. Copy new files from temp to deploy branch
 echo [STEP 5] Copying new files...
 xcopy "%TEMP_DEPLOY%\site" site\ /E /I /Q /Y
 copy "%TEMP_DEPLOY%\mkdocs_base.yml" . /Y
 if exist "%TEMP_DEPLOY%\vercel.json" copy "%TEMP_DEPLOY%\vercel.json" . /Y
 
-:: 9. Verify mkdocs_base.yml was copied correctly
-echo.
-echo [DEBUG] Content of mkdocs_base.yml on deploy branch:
-type mkdocs_base.yml
-echo.
-pause Press any key to continue...
-
-:: 10. Show git status before commit
-echo [STEP 6] Git status before commit:
-git status
-pause Press any key to continue...
-
-:: 11. Clean up temp
+:: 8. Clean up temp
 rd /s /q "%TEMP_DEPLOY%"
 
-:: 12. Commit and push
-echo [STEP 7] Committing and Pushing...
+:: 9. Commit and push
+echo [STEP 6] Committing and Pushing...
 git add -A
 git commit --allow-empty -m "Deploy: %date% %time%"
 git push origin deploy || (
@@ -116,8 +96,8 @@ git push origin deploy || (
 echo [OK] Pushed to deploy branch
 echo.
 
-:: 13. Return to main branch
-echo [STEP 8] Returning to main branch...
+:: 10. Return to main branch
+echo [STEP 7] Returning to main branch...
 git checkout main
 
 echo ============================================
