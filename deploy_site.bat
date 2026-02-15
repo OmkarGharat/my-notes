@@ -40,26 +40,33 @@ if not exist "%~dp0site" (
     exit /b 1
 )
 
-echo [STEP 2] Preparing Deployment...
+:: 3. Show the generated mkdocs_base.yml (for verification)
+echo.
+echo [DEBUG] Content of mkdocs_base.yml on main branch:
+type "%~dp0mkdocs_base.yml"
+echo.
+pause Press any key to continue...
 
-:: 3. Create a temporary folder
+:: 4. Create a temporary folder
 set "TEMP_DEPLOY=%TEMP%\mkdocs_deploy_%RANDOM%"
 mkdir "%TEMP_DEPLOY%"
 
-:: 4. Copy built site and essential configs to temp location
+:: 5. Copy built site and essential configs to temp location
+echo [STEP 2] Copying files to temp folder...
 xcopy "%~dp0site" "%TEMP_DEPLOY%\site\" /E /I /Q /Y || (
     echo [ERROR] Copy failed! 
     pause
     exit /b 1
 )
 
+:: Fix: ensure "copy" is present in the commands below
 if exist "%~dp0vercel.json" copy "%~dp0vercel.json" "%TEMP_DEPLOY%\" /Y
 if exist "%~dp0mkdocs_base.yml" copy "%~dp0mkdocs_base.yml" "%TEMP_DEPLOY%\" /Y
 
 echo [OK] Files backed up to temp location
 echo.
 
-:: 5. Switch to deploy branch
+:: 6. Switch to deploy branch
 echo [STEP 3] Switching to deploy branch...
 git checkout deploy || (
     echo [ERROR] Could not switch to deploy branch
@@ -68,27 +75,35 @@ git checkout deploy || (
     exit /b 1
 )
 
-:: 6. Clean and Update
-echo [STEP 4] Updating deployment branch...
+:: 7. Clean old files on deploy branch
+echo [STEP 4] Cleaning old deployment...
 if exist site rd /s /q site
+if exist mkdocs_base.yml del mkdocs_base.yml
+if exist vercel.json del vercel.json
+
+:: 8. Copy new files from temp to deploy branch
+echo [STEP 5] Copying new files...
 xcopy "%TEMP_DEPLOY%\site" site\ /E /I /Q /Y
+copy "%TEMP_DEPLOY%\mkdocs_base.yml" . /Y
 if exist "%TEMP_DEPLOY%\vercel.json" copy "%TEMP_DEPLOY%\vercel.json" . /Y
-if exist "%TEMP_DEPLOY%\mkdocs_base.yml" copy "%TEMP_DEPLOY%\mkdocs_base.yml" . /Y
 
-:: Verify site folder exists after copy
-if not exist site\index.html (
-    echo [ERROR] site folder is empty! Copy may have failed.
-    git checkout main
-    rd /s /q "%TEMP_DEPLOY%"
-    pause
-    exit /b 1
-)
+:: 9. Verify mkdocs_base.yml was copied correctly
+echo.
+echo [DEBUG] Content of mkdocs_base.yml on deploy branch:
+type mkdocs_base.yml
+echo.
+pause Press any key to continue...
 
-:: 7. Clean up temp
+:: 10. Show git status before commit
+echo [STEP 6] Git status before commit:
+git status
+pause Press any key to continue...
+
+:: 11. Clean up temp
 rd /s /q "%TEMP_DEPLOY%"
 
-:: 8. Git operations
-echo [STEP 5] Committing and Pushing...
+:: 12. Commit and push
+echo [STEP 7] Committing and Pushing...
 git add -A
 git commit --allow-empty -m "Deploy: %date% %time%"
 git push origin deploy || (
@@ -101,8 +116,8 @@ git push origin deploy || (
 echo [OK] Pushed to deploy branch
 echo.
 
-:: 9. Return to main branch
-echo [STEP 6] Returning to main branch...
+:: 13. Return to main branch
+echo [STEP 8] Returning to main branch...
 git checkout main
 
 echo ============================================
