@@ -55,11 +55,15 @@ def build_navigation():
     print("="*60)
     
     if not Path("build_nav.py").exists():
-        print("WARNING: build_nav.py not found! Skipping navigation build.")
-        return True
+        print("ERROR: build_nav.py not found! Cannot continue.")
+        return False
+    
+    # Delete any old mkdocs_base.yml to force a fresh one
+    if Path("mkdocs_base.yml").exists():
+        print("Removing old mkdocs_base.yml...")
+        Path("mkdocs_base.yml").unlink()
     
     return run_command([sys.executable, "build_nav.py"], "Building navigation")
-
 
 def build_mkdocs_site():
     """Build the MkDocs site using mkdocs_base.yml"""
@@ -69,8 +73,7 @@ def build_mkdocs_site():
     
     # Check if mkdocs_base.yml exists
     if not Path("mkdocs_base.yml").exists():
-        print("ERROR: mkdocs_base.yml not found!")
-        print("   Make sure build_nav.py ran successfully.")
+        print("ERROR: mkdocs_base.yml not found! Navigation build may have failed.")
         return False
     
     # Clean old build
@@ -78,9 +81,8 @@ def build_mkdocs_site():
         print("Cleaning old site folder...")
         shutil.rmtree("site")
     
-    # Build site with mkdocs.yml
-    # In publish.py, ensure this line is used:
-    return run_command(["mkdocs", "build", "-f", "mkdocs_base.yml"], "Building MkDocs site")
+    # Build site with mkdocs_base.yml
+    return run_command(["mkdocs", "build"], "Building MkDocs site")
 
 def encrypt_site():
     """Encrypt the site with StatiCrypt"""

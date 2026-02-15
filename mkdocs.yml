@@ -59,5 +59,7 @@ plugins:
   - macros
   - toggle-sidebar:
       toggle_button: navigation
+  - simple-hooks:
+      on_config: "hooks:inject_nav" # calls a function named inject_nav in hooks.py
 extra:
   generator: false

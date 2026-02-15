@@ -1,5 +1,6 @@
 import os
 import yaml
+import sys
 from pathlib import Path
 
 exclude_files = ['404.md']
@@ -34,30 +35,27 @@ def scan_docs_folder(docs_path="docs"):
     return build_nav_recursive(docs_dir)
 
 def update_mkdocs_base_yml(nav_structure):
-    """
-    Reads a clean mkdocs.yml, adds fresh navigation, 
-    and saves the result to mkdocs_base.yml.
-    """
-    base_file = Path("mkdocs.yml")
+    """Write only the navigation to mkdocs_base.yml"""
     output_file = Path("mkdocs_base.yml")
-    
-    if not base_file.exists():
-        print("ERROR: mkdocs.yml (template) not found!")
-        return False
-        
-    with open(base_file, 'r', encoding='utf-8') as f:
-        config = yaml.safe_load(f) or {}
-
-    # This line replaces any existing 'nav' with the fresh scan
-    config['nav'] = nav_structure 
-    
+    # Write just the nav as a YAML dictionary
     with open(output_file, 'w', encoding='utf-8') as f:
-        yaml.dump(config, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
-    
-    print(f"Successfully created {output_file} with fresh navigation.")
+        yaml.dump({'nav': nav_structure}, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+    print(f"Successfully wrote navigation to {output_file}.")
     return True
 
 if __name__ == "__main__":
-    nav = scan_docs_folder("docs")
-    if update_mkdocs_base_yml(nav):
-        print("Navigation merged successfully!")
+    try:
+        print("Scanning docs folder...")
+        nav = scan_docs_folder("docs")
+        print("Navigation structure built:")
+        import json
+        print(json.dumps(nav, indent=2))   # this shows you exactly what will be written
+        
+        if update_mkdocs_base_yml(nav):
+            print("Navigation merged successfully!")
+        else:
+            print("ERROR: Could not update mkdocs_base.yml")
+            sys.exit(1)
+    except Exception as e:
+        print(f"ERROR in build_nav.py: {e}")
+        sys.exit(1)
